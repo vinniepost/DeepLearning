@@ -5,6 +5,7 @@ from keras.layers import Dense, Conv2D, Flatten, MaxPooling2D
 from keras.utils import to_categorical
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow import keras
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 log_dir = "./logs/"
 tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
@@ -17,6 +18,28 @@ tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
 # Convert labels to one-hot encoding
 y_train = to_categorical(y_train, 10)
+
+
+# Definieer de ImageDataGenerator voor data-augmentatie.
+# Gebruik ImageDataGenerator van Keras om verschillende
+# transformaties toe te passen op de afbeeldingen tijdens het
+# trainen:
+# • Willekeurige rotatie tussen 0 en 10 graden
+# • Willekeurige verschuiving horizontaal
+# • Willekeurige verschuiving verticaal
+# • Willekeurige zoom tussen 0 en 10%
+
+
+datagen = ImageDataGenerator(
+    rotation_range=10,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.1
+)
+
+augmented_data_gen = datagen.flow(X_train.reshape(-1, 28, 28, 1),y_train, batch_size=64)
+
+
 
 model = Sequential([
     Conv2D(64, kernel_size=3, activation='relu', input_shape=(28, 28, 1)),
@@ -32,9 +55,12 @@ model.compile(optimizer='adam',
               loss='categorical_crossentropy',  # Changed to categorical_crossentropy
               metrics=['accuracy'])
 
-model.fit(X_train, y_train, epochs=5, validation_split=0, callbacks=[tensorboard_callback])
 
-test_loss, test_acc = model.evaluate(X_test, to_categorical(y_test, 10), verbose=2)  # Ensure test labels are one-hot encoded
+model.fit(augmented_data_gen, epochs=2, validation_data=(X_test.reshape(-1, 28, 28, 1), to_categorical(y_test, 10)), callbacks=[tensorboard_callback])
+
+# model.fit(X_train, y_train, epochs=5, validation_split=0, callbacks=[tensorboard_callback])
+test_loss, test_acc = model.evaluate(X_test.reshape(-1, 28, 28, 1), to_categorical(y_test, 10), verbose=2)  # Ensure test labels are one-hot encoded
+
 print(f'\nTest accuracy: {test_acc}')
 
 import matplotlib.pyplot as plt
